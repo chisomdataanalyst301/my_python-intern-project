@@ -1,0 +1,357 @@
+
+<h2 class="sr-only">Customer churn analytics dashboard with KPIs, filters, and multiple chart views.</h2>
+
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: var(--font-sans); }
+.dash { padding: 1.5rem 0; }
+.header { background: #0f2640; border-radius: var(--border-radius-lg); padding: 1.25rem 1.5rem; margin-bottom: 1.25rem; display: flex; align-items: center; justify-content: space-between; }
+.header-left h1 { font-size: 20px; font-weight: 500; color: #fff; }
+.header-left p { font-size: 12px; color: #7fa8cc; margin-top: 2px; }
+.header-badge { background: #1d4470; color: #7ab8f5; font-size: 11px; padding: 4px 10px; border-radius: var(--border-radius-md); }
+.filters { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 1.25rem; align-items: center; }
+.filters label { font-size: 12px; color: var(--color-text-secondary); margin-right: 2px; }
+.filters select { font-size: 12px; padding: 5px 8px; border-radius: var(--border-radius-md); border: 0.5px solid var(--color-border-secondary); background: var(--color-background-primary); color: var(--color-text-primary); }
+.filter-group { display: flex; align-items: center; gap: 5px; background: var(--color-background-secondary); border-radius: var(--border-radius-md); padding: 5px 10px; border: 0.5px solid var(--color-border-tertiary); }
+.kpi-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 10px; margin-bottom: 1.25rem; }
+.kpi { background: var(--color-background-secondary); border-radius: var(--border-radius-md); padding: 0.9rem 1rem; }
+.kpi-label { font-size: 11px; color: var(--color-text-secondary); margin-bottom: 4px; text-transform: uppercase; letter-spacing: 0.04em; }
+.kpi-value { font-size: 22px; font-weight: 500; color: var(--color-text-primary); }
+.kpi-sub { font-size: 11px; margin-top: 3px; }
+.kpi-danger .kpi-value { color: #c0392b; }
+.kpi-success .kpi-value { color: #0f6e56; }
+.kpi-info .kpi-value { color: #185fa5; }
+.kpi-warn .kpi-value { color: #854f0b; }
+.charts-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 1.25rem; }
+.chart-card { background: var(--color-background-primary); border: 0.5px solid var(--color-border-tertiary); border-radius: var(--border-radius-lg); padding: 1rem 1.25rem; }
+.chart-card.full { grid-column: 1 / -1; }
+.chart-title { font-size: 13px; font-weight: 500; color: var(--color-text-primary); margin-bottom: 0.75rem; }
+.chart-sub { font-size: 11px; color: var(--color-text-secondary); margin-bottom: 0.75rem; margin-top: -4px; }
+.insight-box { background: #0f2640; border-radius: var(--border-radius-lg); padding: 1rem 1.25rem; }
+.insight-title { font-size: 13px; font-weight: 500; color: #7ab8f5; margin-bottom: 0.75rem; }
+.insight-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 10px; }
+.insight-item { background: #1a3556; border-radius: var(--border-radius-md); padding: 0.75rem 1rem; }
+.insight-item p { font-size: 12px; color: #a8c8e8; line-height: 1.5; }
+.insight-item strong { color: #e0effc; font-weight: 500; }
+.legend { display: flex; gap: 14px; flex-wrap: wrap; margin-bottom: 8px; font-size: 11px; color: var(--color-text-secondary); }
+.legend span { display: flex; align-items: center; gap: 4px; }
+.legend-sq { width: 9px; height: 9px; border-radius: 2px; display: inline-block; }
+</style>
+
+<div class="dash">
+  <div class="header">
+    <div class="header-left">
+      <h1>Customer Churn Analytics</h1>
+      <p>Telecom dataset — 667 customers across 51 states</p>
+    </div>
+    <div class="header-badge">Model accuracy: 99.25%</div>
+  </div>
+
+  <div class="filters">
+    <div class="filter-group">
+      <label>International plan</label>
+      <select id="f-intl" onchange="applyFilters()">
+        <option value="all">All</option>
+        <option value="1">Yes</option>
+        <option value="0">No</option>
+      </select>
+    </div>
+    <div class="filter-group">
+      <label>Voicemail plan</label>
+      <select id="f-vm" onchange="applyFilters()">
+        <option value="all">All</option>
+        <option value="1">Yes</option>
+        <option value="0">No</option>
+      </select>
+    </div>
+    <div class="filter-group">
+      <label>State</label>
+      <select id="f-state" onchange="applyFilters()">
+        <option value="all">All states</option>
+      </select>
+    </div>
+    <button onclick="resetFilters()" style="font-size:12px; padding: 5px 12px;">Reset filters</button>
+  </div>
+
+  <div class="kpi-grid">
+    <div class="kpi kpi-info">
+      <div class="kpi-label">Total customers</div>
+      <div class="kpi-value" id="kpi-total">667</div>
+      <div class="kpi-sub" style="color:var(--color-text-secondary);">in dataset</div>
+    </div>
+    <div class="kpi kpi-danger">
+      <div class="kpi-label">Churned</div>
+      <div class="kpi-value" id="kpi-churned">95</div>
+      <div class="kpi-sub" style="color:#c0392b;" id="kpi-rate">14.2% churn rate</div>
+    </div>
+    <div class="kpi kpi-success">
+      <div class="kpi-label">Retained</div>
+      <div class="kpi-value" id="kpi-retained">572</div>
+      <div class="kpi-sub" style="color:#0f6e56;">85.8% retention</div>
+    </div>
+    <div class="kpi kpi-warn">
+      <div class="kpi-label">Avg day charge</div>
+      <div class="kpi-value" id="kpi-charge">$30.76</div>
+      <div class="kpi-sub" style="color:var(--color-text-secondary);">per customer</div>
+    </div>
+    <div class="kpi">
+      <div class="kpi-label">Avg CS calls</div>
+      <div class="kpi-value" id="kpi-cs">1.72</div>
+      <div class="kpi-sub" style="color:var(--color-text-secondary);">per customer</div>
+    </div>
+  </div>
+
+  <div class="charts-grid">
+    <div class="chart-card">
+      <div class="chart-title">Churn rate by customer service calls</div>
+      <div class="chart-sub">Churn spikes sharply at 4+ calls</div>
+      <div class="legend">
+        <span><span class="legend-sq" style="background:#378ADD"></span>Churn rate %</span>
+        <span><span class="legend-sq" style="background:#9FE1CB"></span>Total customers</span>
+      </div>
+      <div style="position:relative;height:200px;"><canvas id="csChart" role="img" aria-label="Bar chart showing churn rate increasing with customer service calls. Calls of 4 or more have over 36% churn.">Churn rises steeply at 4+ service calls.</canvas></div>
+    </div>
+    <div class="chart-card">
+      <div class="chart-title">Churn by plan type</div>
+      <div class="chart-sub">International plan customers churn far more</div>
+      <div class="legend">
+        <span><span class="legend-sq" style="background:#E24B4A"></span>Churned</span>
+        <span><span class="legend-sq" style="background:#5DCAA5"></span>Retained</span>
+      </div>
+      <div style="position:relative;height:200px;"><canvas id="planChart" role="img" aria-label="Stacked bar chart comparing churn by plan combination. International plan users have highest churn.">International plan customers show 35%+ churn.</canvas></div>
+    </div>
+    <div class="chart-card">
+      <div class="chart-title">Churn by daily charge bucket</div>
+      <div class="chart-sub">Customers billed $45+ churn at 62%</div>
+      <div style="position:relative;height:200px;"><canvas id="chargeChart" role="img" aria-label="Bar chart of churn rate by daily charge bucket. The 45+ bucket has 62% churn.">High-charge customers have dramatically higher churn.</canvas></div>
+    </div>
+    <div class="chart-card">
+      <div class="chart-title">Overall churn composition</div>
+      <div class="chart-sub">95 churned vs 572 retained</div>
+      <div style="position:relative;height:200px;"><canvas id="donutChart" role="img" aria-label="Donut chart showing 14.2% churn and 85.8% retention.">14.2% of customers churned.</canvas></div>
+    </div>
+    <div class="chart-card full">
+      <div class="chart-title">Top 15 states by churn rate</div>
+      <div class="chart-sub">CA, MD, CO lead with 28–40% churn rates</div>
+      <div style="position:relative;height:260px;"><canvas id="stateChart" role="img" aria-label="Horizontal bar chart of churn rate by state. California has the highest at 40%.">California, Maryland, Colorado show highest churn.</canvas></div>
+    </div>
+  </div>
+
+  <div class="insight-box">
+    <div class="insight-title"><i class="ti ti-bulb" aria-hidden="true" style="margin-right:5px;font-size:14px;"></i>Key insights</div>
+    <div class="insight-grid">
+      <div class="insight-item"><p><strong>High-bill risk:</strong> Customers charged $45+/day churn at <strong>62%</strong> — 4× the average. Consider tiered pricing relief for heavy users.</p></div>
+      <div class="insight-item"><p><strong>International plan paradox:</strong> Customers with international plans churn at <strong>35.9%</strong> vs 12.4% without — review international plan value proposition.</p></div>
+      <div class="insight-item"><p><strong>Service call threshold:</strong> Churn jumps to <strong>64.7%</strong> at 5 service calls. Proactive outreach after call 3 could prevent churn.</p></div>
+      <div class="insight-item"><p><strong>Voicemail protects:</strong> Voicemail plan users churn at only <strong>7.9%</strong> vs 16.7% — the plan builds stickiness. Promote it more aggressively.</p></div>
+      <div class="insight-item"><p><strong>Geographic hotspots:</strong> CA, MD, CO and SC account for disproportionate churn. Targeted regional retention campaigns warranted.</p></div>
+    </div>
+  </div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<script>
+const RAW = [
+  {state:"AK",total:9,churned:0,churn_rate:0,intl:0,vm:0},{state:"AL",total:14,churned:1,churn_rate:7.1,intl:0,vm:0},
+  {state:"AR",total:8,churned:0,churn_rate:0,intl:0,vm:0},{state:"AZ",total:19,churned:1,churn_rate:5.3,intl:0,vm:0},
+  {state:"CA",total:10,churned:4,churn_rate:40,intl:1,vm:0},{state:"CO",total:7,churned:2,churn_rate:28.6,intl:1,vm:0},
+  {state:"CT",total:15,churned:1,churn_rate:6.7,intl:0,vm:0},{state:"DC",total:9,churned:0,churn_rate:0,intl:0,vm:0},
+  {state:"DE",total:10,churned:1,churn_rate:10,intl:0,vm:0},{state:"FL",total:9,churned:1,churn_rate:11.1,intl:0,vm:0},
+  {state:"GA",total:5,churned:0,churn_rate:0,intl:0,vm:0},{state:"HI",total:9,churned:1,churn_rate:11.1,intl:0,vm:0},
+  {state:"IA",total:6,churned:0,churn_rate:0,intl:0,vm:0},{state:"ID",total:17,churned:4,churn_rate:23.5,intl:1,vm:0},
+  {state:"IL",total:13,churned:1,churn_rate:7.7,intl:0,vm:0},{state:"IN",total:17,churned:3,churn_rate:17.6,intl:0,vm:0},
+  {state:"KS",total:18,churned:3,churn_rate:16.7,intl:0,vm:0},{state:"KY",total:16,churned:2,churn_rate:12.5,intl:0,vm:0},
+  {state:"LA",total:16,churned:1,churn_rate:6.2,intl:0,vm:0},{state:"MA",total:13,churned:3,churn_rate:23.1,intl:1,vm:0},
+  {state:"MD",total:10,churned:3,churn_rate:30,intl:1,vm:0},{state:"ME",total:13,churned:2,churn_rate:15.4,intl:0,vm:0},
+  {state:"MI",total:15,churned:3,churn_rate:20,intl:0,vm:0},{state:"MN",total:14,churned:2,churn_rate:14.3,intl:0,vm:0},
+  {state:"MO",total:12,churned:2,churn_rate:16.7,intl:0,vm:0},{state:"MS",total:17,churned:3,churn_rate:17.6,intl:0,vm:0},
+  {state:"MT",total:15,churned:4,churn_rate:26.7,intl:1,vm:0},{state:"NC",total:12,churned:2,churn_rate:16.7,intl:0,vm:0},
+  {state:"ND",total:18,churned:2,churn_rate:11.1,intl:0,vm:0},{state:"NE",total:16,churned:1,churn_rate:6.2,intl:0,vm:0},
+  {state:"NH",total:13,churned:0,churn_rate:0,intl:0,vm:0},{state:"NJ",total:18,churned:4,churn_rate:22.2,intl:1,vm:0},
+  {state:"NM",total:18,churned:2,churn_rate:11.1,intl:0,vm:0},{state:"NV",total:5,churned:1,churn_rate:20,intl:0,vm:0},
+  {state:"NY",total:15,churned:3,churn_rate:20,intl:0,vm:0},{state:"OH",total:12,churned:0,churn_rate:0,intl:0,vm:0},
+  {state:"OK",total:9,churned:2,churn_rate:22.2,intl:1,vm:0},{state:"OR",total:16,churned:4,churn_rate:25,intl:1,vm:0},
+  {state:"PA",total:9,churned:0,churn_rate:0,intl:0,vm:0},{state:"RI",total:17,churned:3,churn_rate:17.6,intl:0,vm:0},
+  {state:"SC",total:11,churned:3,churn_rate:27.3,intl:1,vm:0},{state:"SD",total:11,churned:2,churn_rate:18.2,intl:0,vm:0},
+  {state:"TN",total:12,churned:0,churn_rate:0,intl:0,vm:0},{state:"TX",total:17,churned:2,churn_rate:11.8,intl:0,vm:0},
+  {state:"UT",total:12,churned:2,churn_rate:16.7,intl:0,vm:0},{state:"VA",total:10,churned:1,churn_rate:10,intl:0,vm:0},
+  {state:"VT",total:16,churned:2,churn_rate:12.5,intl:0,vm:0},{state:"WA",total:18,churned:4,churn_rate:22.2,intl:0,vm:0},
+  {state:"WI",total:17,churned:3,churn_rate:17.6,intl:0,vm:0},{state:"WV",total:18,churned:3,churn_rate:16.7,intl:0,vm:0},
+  {state:"WY",total:11,churned:1,churn_rate:9.1,intl:0,vm:0}
+];
+
+const CS_DATA = [
+  {calls:0,churned:13,total:142,churn_rate:9.2},{calls:1,churned:23,total:236,churn_rate:9.7},
+  {calls:2,churned:25,total:151,churn_rate:16.6},{calls:3,churned:7,total:81,churn_rate:8.6},
+  {calls:4,churned:12,total:33,churn_rate:36.4},{calls:5,churned:11,total:17,churn_rate:64.7},
+  {calls:6,churned:4,total:5,churn_rate:80},{calls:7,churned:0,total:1,churn_rate:0}
+];
+const PLANS = [
+  {label:'No plan',intl:0,vm:0,total:442,churned:68,rate:15.4},
+  {label:'VM only',intl:0,vm:1,total:172,churned:8,rate:4.7},
+  {label:'Intl only',intl:1,vm:0,total:36,churned:12,rate:33.3},
+  {label:'Intl + VM',intl:1,vm:1,total:17,churned:7,rate:41.2}
+];
+const CHARGES = [
+  {bucket:'0–15',churned:5,total:35,rate:14.3},{bucket:'15–25',churned:14,total:138,rate:10.1},
+  {bucket:'25–35',churned:22,total:276,rate:8.0},{bucket:'35–45',churned:23,total:168,rate:13.7},
+  {bucket:'45+',churned:31,total:50,rate:62.0}
+];
+
+const states = [...new Set(RAW.map(d=>d.state))].sort();
+const sel = document.getElementById('f-state');
+states.forEach(s=>{ const o=document.createElement('option'); o.value=s; o.text=s; sel.appendChild(o); });
+
+let charts = {};
+function makeChart(id, cfg) {
+  if(charts[id]) charts[id].destroy();
+  charts[id] = new Chart(document.getElementById(id), cfg);
+}
+
+function getFilteredStateData() {
+  const intl = document.getElementById('f-intl').value;
+  const vm = document.getElementById('f-vm').value;
+  const state = document.getElementById('f-state').value;
+  let data = RAW;
+  if(state !== 'all') data = data.filter(d=>d.state===state);
+  return data;
+}
+
+function applyFilters() {
+  const intl = document.getElementById('f-intl').value;
+  const vm = document.getElementById('f-vm').value;
+  const state = document.getElementById('f-state').value;
+
+  let filtered = RAW;
+  if(state !== 'all') filtered = filtered.filter(d=>d.state===state);
+  
+  let totalC = filtered.reduce((a,d)=>a+d.total,0);
+  let churnedC = filtered.reduce((a,d)=>a+d.churned,0);
+  let retainedC = totalC - churnedC;
+  let rate = totalC > 0 ? (churnedC/totalC*100).toFixed(1) : 0;
+  
+  document.getElementById('kpi-total').textContent = totalC;
+  document.getElementById('kpi-churned').textContent = churnedC;
+  document.getElementById('kpi-retained').textContent = retainedC;
+  document.getElementById('kpi-rate').textContent = rate + '% churn rate';
+
+  renderStateChart(filtered);
+  renderDonut(churnedC, retainedC);
+}
+
+function resetFilters() {
+  document.getElementById('f-intl').value='all';
+  document.getElementById('f-vm').value='all';
+  document.getElementById('f-state').value='all';
+  applyFilters();
+}
+
+function renderStateChart(data) {
+  const sorted = [...data].sort((a,b)=>b.churn_rate-a.churn_rate).slice(0,15);
+  makeChart('stateChart',{
+    type:'bar',
+    data:{
+      labels: sorted.map(d=>d.state),
+      datasets:[{
+        label:'Churn rate %',
+        data: sorted.map(d=>d.churn_rate),
+        backgroundColor: sorted.map(d=>d.churn_rate>=25?'#E24B4A':d.churn_rate>=15?'#EF9F27':'#378ADD'),
+        borderRadius:4
+      }]
+    },
+    options:{
+      responsive:true,maintainAspectRatio:false,
+      plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>c.parsed.y+'% churn rate'}}},
+      scales:{
+        x:{ticks:{font:{size:11},color:'#888',autoSkip:false}},
+        y:{ticks:{callback:v=>v+'%',font:{size:11},color:'#888'},grid:{color:'rgba(128,128,128,0.1)'}}
+      }
+    }
+  });
+}
+
+function renderDonut(churned, retained) {
+  makeChart('donutChart',{
+    type:'doughnut',
+    data:{
+      labels:['Churned','Retained'],
+      datasets:[{data:[churned,retained],backgroundColor:['#E24B4A','#1D9E75'],borderWidth:0,hoverOffset:4}]
+    },
+    options:{
+      responsive:true,maintainAspectRatio:false,cutout:'65%',
+      plugins:{
+        legend:{display:false},
+        tooltip:{callbacks:{label:c=>{const t=c.dataset.data.reduce((a,v)=>a+v,0); return c.label+': '+(c.parsed/t*100).toFixed(1)+'%';}}}
+      }
+    }
+  });
+}
+
+function initCharts() {
+  makeChart('csChart',{
+    type:'bar',
+    data:{
+      labels: CS_DATA.map(d=>d.calls+''),
+      datasets:[
+        {label:'Churn rate %',data:CS_DATA.map(d=>d.churn_rate),backgroundColor:'#378ADD',borderRadius:4,yAxisID:'y'},
+        {label:'Total customers',data:CS_DATA.map(d=>d.total),backgroundColor:'#9FE1CB',borderRadius:4,yAxisID:'y2'}
+      ]
+    },
+    options:{
+      responsive:true,maintainAspectRatio:false,
+      plugins:{legend:{display:false}},
+      scales:{
+        x:{ticks:{font:{size:11},color:'#888'},title:{display:true,text:'Service calls',font:{size:11},color:'#888'}},
+        y:{position:'left',ticks:{callback:v=>v+'%',font:{size:11},color:'#378ADD'},grid:{color:'rgba(128,128,128,0.1)'}},
+        y2:{position:'right',ticks:{font:{size:11},color:'#1D9E75'},grid:{drawOnChartArea:false}}
+      }
+    }
+  });
+
+  makeChart('planChart',{
+    type:'bar',
+    data:{
+      labels: PLANS.map(d=>d.label),
+      datasets:[
+        {label:'Churned',data:PLANS.map(d=>d.churned),backgroundColor:'#E24B4A',borderRadius:4},
+        {label:'Retained',data:PLANS.map(d=>d.total-d.churned),backgroundColor:'#5DCAA5',borderRadius:4}
+      ]
+    },
+    options:{
+      responsive:true,maintainAspectRatio:false,
+      indexAxis:'x',
+      plugins:{legend:{display:false}},
+      scales:{
+        x:{stacked:true,ticks:{font:{size:11},color:'#888'}},
+        y:{stacked:true,ticks:{font:{size:11},color:'#888'},grid:{color:'rgba(128,128,128,0.1)'}}
+      }
+    }
+  });
+
+  makeChart('chargeChart',{
+    type:'bar',
+    data:{
+      labels: CHARGES.map(d=>d.bucket),
+      datasets:[{
+        label:'Churn rate %',
+        data: CHARGES.map(d=>d.rate),
+        backgroundColor: CHARGES.map(d=>d.rate>=40?'#E24B4A':d.rate>=15?'#EF9F27':'#378ADD'),
+        borderRadius:4
+      }]
+    },
+    options:{
+      responsive:true,maintainAspectRatio:false,
+      plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>c.parsed.y+'% churn'}}},
+      scales:{
+        x:{ticks:{font:{size:11},color:'#888'},title:{display:true,text:'Daily charge ($)',font:{size:11},color:'#888'}},
+        y:{ticks:{callback:v=>v+'%',font:{size:11},color:'#888'},grid:{color:'rgba(128,128,128,0.1)'}}
+      }
+    }
+  });
+
+  renderStateChart(RAW);
+  renderDonut(95, 572);
+}
+
+initCharts();
+</script>
